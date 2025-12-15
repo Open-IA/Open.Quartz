@@ -1,0 +1,29 @@
+{
+  "name": "open.quartz",
+  "version": "1.0.0",
+  "description": "🌱 publish your digital garden and notes as a website",
+  "keywords": [
+    "site",
+    "generator",
+    "ssg",
+    "digital-garden",
+    "markdown",
+    "blog",
+    "quartz"
+  ],
+  "homepage": "https://github.com/Open-IA/Open.Quartz#readme",
+  "bugs": {
+    "url": "https://github.com/Open-IA/Open.Quartz/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Open-IA/Open.Quartz.git"
+  },
+  "license": "MIT",
+  "author": "AshGreyG",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "tsx --test"
+  }
+}
