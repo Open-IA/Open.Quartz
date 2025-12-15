@@ -4,16 +4,21 @@ on:
   push:
     paths:
       - "devlogs/**"
+      - ".github/workflows"
+  pull_request:
+    paths:
+      - "devlogs/**"
+      - ".github/workflows"
 
 permissions:
   contents: read
   pages: write
   id-token: write
- 
+
 concurrency:
   group: "pages"
   cancel-in-progress: false
- 
+
 jobs:
   build:
     if: ${{ github.repository == "Open-IA/Open.Quartz" }}
