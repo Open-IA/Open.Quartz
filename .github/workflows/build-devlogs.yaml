@@ -4,11 +4,11 @@ on:
   push:
     paths:
       - "devlogs/**"
-      - ".github/workflows"
+      - ".github/workflows/**"
   pull_request:
     paths:
       - "devlogs/**"
-      - ".github/workflows"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
