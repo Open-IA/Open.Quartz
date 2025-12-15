@@ -1,9 +1,11 @@
 ---
+title: 2025-12-15-entrypoint
 tags:
   - computer-engineering
   - computer-frontend
   - open-source-project
   - quartz
+  - typescript
 project: quartz
 time: 2025-12-15
 ---
