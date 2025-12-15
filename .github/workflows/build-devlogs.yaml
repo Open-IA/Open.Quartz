@@ -16,7 +16,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: "pages-devlogs"
   cancel-in-progress: false
 
 jobs:
@@ -35,11 +35,13 @@ jobs:
           mkdir -p original-quartz
           cd original-quartz
           git clone https://github.com/jackyzha0/quartz
-          cp ../devlogs ./ -r
-          cp ../quartz.config.ts ./
+          cp ../devlogs/*.md ./quartz/content/ -r
+          cp ../quartz.config.ts ./quartz/
       - name: Install Dependencies
+        working-directory: original-quartz/quartz
         run: npm ci
       - name: Build Quartz
+        working-directory: original-quartz/quartz
         run: npx quartz build -d devlogs
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
