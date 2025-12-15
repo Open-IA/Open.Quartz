@@ -42,7 +42,7 @@ jobs:
         run: npm ci
       - name: Build Quartz
         working-directory: original-quartz/quartz
-        run: npx quartz build -d devlogs
+        run: npx quartz build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
