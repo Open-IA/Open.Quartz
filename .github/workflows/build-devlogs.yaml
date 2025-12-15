@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ github.repository == "Open-IA/Open.Quartz" }}
+    if: ${{ github.repository == 'Open-IA/Open.Quartz' }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
