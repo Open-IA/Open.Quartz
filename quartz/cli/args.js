@@ -1,3 +1,9 @@
+/**
+ * @typedef {object} CommonArgvInterface
+ * @property {string} directory
+ * @property {boolean} verbose
+ */
+
 export const CommonArgv = {
   directory: {
     // The command argument's name, commonly full name like `--directory`
@@ -17,6 +23,15 @@ export const CommonArgv = {
     describe: "print out extra logging information",
   },
 };
+
+/**
+ * @typedef {object} CreateArgvInterface
+ * @property {string} directory
+ * @property {boolean} verbose
+ * @property {string} source
+ * @property {string} strategy
+ * @property {string} link
+ */
 
 export const CreateArgv = {
   ...CommonArgv,
