@@ -3,13 +3,13 @@
 import fs, { promises } from "fs";
 import path from "path";
 import { styleText } from "util";
-import { intro, outro, select } from "@clack/prompts";
+import { intro, outro, select, text } from "@clack/prompts";
 import { CreateArgv } from "./args.js";
 
 import {
   cwd, version
 } from "./constants.js";
-import { exitIfCancel } from "./helpers.js";
+import { escapePath, exitIfCancel } from "./helpers.js";
 
 /**
  * Resolve content directory path
@@ -110,6 +110,71 @@ export async function handleCreate(argv) {
           }
         ]
       })
+    );
+  }
+
+  async function rmContentFolder() {
+    const contentFolderStat = await promises.lstat(contentFolder);
+    if (contentFolderStat.isSymbolicLink()) {
+      await promises.unlink(contentFolder);
+    } else {
+      await promises.rm(contentFolder);
+    }
+  }
+
+  const gitkeepPath = path.join(contentFolder, ".gitkeep");
+  if (fs.existsSync(gitkeepPath)) {
+    await promises.unlink(gitkeepPath);
+    // Delete the .gitkeep file
+  }
+
+  if (setupStrategy === "copy" || setupStrategy === "symlink") {
+    let originalFolder = sourceDirectory;
+
+    // `--source` is not provided
+    if (!sourceDirectory) {
+      originalFolder = escapePath(
+        exitIfCancel(
+          await text({
+            message: "Enter the full path to existing content folder",
+            placeholder:
+              "On most terminal simulator, you can drag and drop a folder into the window and it will paste the full path",
+            validate(fp) {
+              const fullPath = escapePath(fp);
+              if (!fs.existsSync(fp)) {
+                return "The given path doesn't exist";
+              } else if (!fs.lstatSync(fullPath).isDirectory) {
+                return "The given path is not a folder";
+              }
+            },
+            // After ES6, functions in object property can be simplified from
+            //   validate: function(fp) {}
+            // to 
+            //   validate(fp) {}
+          }),
+        ),
+      );
+    }
+
+    await rmContentFolder();
+    if (setupStrategy === "copy") {
+      await promises.cp(originalFolder, contentFolder, {
+        recursive: true,
+        preserveTimestamps: true,
+      });
+    } else if (setupStrategy === "symlink") {
+      await promises.symlink(originalFolder, contentFolder)
+    }
+  } else if (setupStrategy === "new") {
+    await promises.writeFile(
+      path.join(contentFolder, "index.md"),
+      `---
+title: Welcome to Quartz
+---
+
+This is a blank quartz installation.
+See the [documentation](https://quartz.jzhao.xyz) for how to get started.
+`,
     );
   }
 }
