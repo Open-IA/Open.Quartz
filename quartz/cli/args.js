@@ -29,8 +29,8 @@ export const CommonArgv = {
  * @property {string} directory
  * @property {boolean} verbose
  * @property {string} source
- * @property {string} strategy
- * @property {string} link
+ * @property {"new" | "copy" | "symlink"} [strategy]
+ * @property {string} [links]
  */
 
 export const CreateArgv = {
