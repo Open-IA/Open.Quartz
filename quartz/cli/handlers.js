@@ -10,6 +10,7 @@ import {
   cwd, version
 } from "./constants.js";
 import { escapePath, exitIfCancel } from "./helpers.js";
+import { execSync } from "child_process";
 
 /**
  * Resolve content directory path
@@ -177,4 +178,49 @@ See the [documentation](https://quartz.jzhao.xyz) for how to get started.
 `,
     );
   }
+
+  if (!linkResolutionStrategy) {
+    linkResolutionStrategy = exitIfCancel(
+      await select({
+        message: `Choose how Quartz should resolve links in your content. This should match Obsidian's link format. You can change this later in \`quartz.config.ts\`.`,
+        options: [
+          {
+            value: "shortest",
+            label: "Treat links as shortest path",
+            hint: "(default)"
+          },
+          {
+            value: "absolute",
+            label: "Treat links as absolute path",
+          },
+          {
+            value: "relative",
+            label: "Treat links as relative path",
+          },
+        ],
+      }),
+    );
+  }
+
+  // Now, do config changes
+  const configFilePath = path.join(cwd, "quartz.config.ts");
+  let configContent = await promises.readFile(configFilePath, {
+    encoding: "utf-8"
+  });
+  configContent = configContent.replace(
+    /markdownLinkResolution: ['"](.+)['"]/,
+    `markdownLinkResolution: "${linkResolutionStrategy}"`
+  );
+  await promises.writeFile(configFilePath, configContent);
+
+  execSync(
+    `git remote show upstream || git remote add upstream https://github.com/jackyzha0/quartz.git`, {
+      stdio: "ignore"
+    }
+  );
+
+  outro(`You're all set! Not sure what to do next? Try:
+  • Customizing Quartz a bit more by editing \`quartz.config.ts\`
+  • Running \`npx quartz build --serve\` to preview your Quartz locally
+  • Hosting you Quartz online (see: https://quartz.jzhao.xyz/hosting)`);
 }
