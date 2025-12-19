@@ -178,3 +178,26 @@ export function escapePath(fp) {
     .trim();
 }
 ```
+
+### 1.3 Some new tricks for me
+
+1. After ES6, function property defined in object can omit `function` keyword:
+
+  ``` js
+  // Before ES6
+  const testObject = {
+    validate: function(filePath) {
+      // ...
+    }
+  }
+
+  // After ES6
+  const testObject = {
+    validate(filePath) {
+      // ...
+    }
+  }
+  ```
+
+2. In shell, command like `<command-a> || <command-b>` will first execute command
+  `a` and if it returns non-zero return code, shell will execute command `b`.
