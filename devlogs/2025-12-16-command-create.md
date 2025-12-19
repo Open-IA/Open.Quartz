@@ -159,3 +159,22 @@ export function exitIfCancel(val) {
   }
 }
 ```
+
+### 1.2 First encountered bug
+
+There is a bug of regex replacement in function `escapePath`, and I have reported
+the [issue](https://github.com/jackyzha0/quartz/issues/2253) and a
+[fix PR](https://github.com/jackyzha0/quartz/pull/2254).
+
+Original regex will convert path like `"../Test Directory"` to literal string
+`"$1"` but not matched content. So I fix the function `escapePath` like this:
+
+``` js
+export function escapePath(fp) {
+  return fp
+    .replace(/\\ /g, " ")
+    .replace(/^"(.*)"$/, "$1")
+    .replace(/^'(.*)'$/, "$1")
+    .trim();
+}
+```
