@@ -2,14 +2,18 @@ import { isCancel, outro } from "@clack/prompts";
 import { styleText } from "util";
 
 /**
- * @param {string} fp
+ * In shell, some directories or files may contain space like 'My Favorite', and
+ * shell will denote them using escape character like 'My\ Favorite'. Although
+ * nodejs can deal with them correctly without this function. Original code has
+ * a regex bug.
+ * @param {string} fp input file path
  * @returns {string}
  */
 export function escapePath(fp) {
   return fp
     .replace(/\\ /g, " ")
-    .replace(/^".*"$/, "$1")
-    .replace(/^'.*"$/, "$1")
+    .replace(/^"(.*)"$/, "$1")
+    .replace(/^'(.*)'$/, "$1")
     .trim();
 }
 
