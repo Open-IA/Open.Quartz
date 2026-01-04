@@ -1,5 +1,5 @@
 ---
-title: 2025-12-16-command-create
+title: 2025-12-26-command-update
 tags:
   - computer-engineering
   - computer-frontend
