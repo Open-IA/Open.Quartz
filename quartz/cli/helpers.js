@@ -1,6 +1,7 @@
 import { isCancel, outro } from "@clack/prompts";
 import { styleText } from "node:util";
 import fs from "node:fs";
+import process from "node:process";
 import { contentCacheFolder } from "./constants.js";
 import { spawnSync } from "node:child_process";
 
@@ -73,9 +74,36 @@ export function gitPull(origin, branch) {
     "recursive",
     "-X",           // [+] keep our version when there is merge conflicts
     "ours",
-    "--no-edit"
+    "--no-edit"     // [+] do not open editors like vim / nano
   ];
   const out = spawnSync("git", ["pull", ...flags, origin, branch], {
     stdio: "inherit"
+  });
+
+  if (out.stderr) {
+    throw new Error(styleText("red", `Error while pulling updates: ${out.stderr}`));
+  } else if (out.status !== 0) {
+    throw new Error(styleText("red", `Error while pulling updates`));
+  }
+}
+
+/**
+ * Pop content folder from cache and delete cache folder.
+ * @param {string} contentFolder 
+ */
+export async function popContentFolder(contentFolder) {
+  await fs.promises.rm(contentFolder, {
+    force: true,
+    recursive: true,
+  });
+  await fs.promises.cp(contentCacheFolder, contentFolder, {
+    force: true,
+    recursive: true,
+    verbatimSymlinks: true,
+    preserveTimestamps: true,
+  });
+  await fs.promises.rm(contentCacheFolder, {
+    force: true,
+    recursive: true,
   });
 }

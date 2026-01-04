@@ -29,6 +29,8 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.11.0",
+    "@types/node": "^25.0.3",
+    "@types/yargs": "^17.0.33",
     "yargs": "^18.0.0"
   }
 }

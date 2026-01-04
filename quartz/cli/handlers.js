@@ -12,7 +12,7 @@ import {
   UPSTREAM_NAME,
   cwd, version
 } from "./constants.js";
-import { escapePath, exitIfCancel, gitPull, stashContentFolder } from "./helpers.js";
+import { escapePath, exitIfCancel, gitPull, popContentFolder, stashContentFolder } from "./helpers.js";
 import { execSync } from "node:child_process";
 
 /**
@@ -250,6 +250,9 @@ export async function handleUpdate(argv) {
     gitPull(UPSTREAM_NAME, QUARTZ_SOURCE_BRANCH);
   } catch {
     console.log(styleText("red", "An error occurred above while pulling updates."));
-    
+    await popContentFolder(contentFolder);
   }
+
+  await popContentFolder(contentFolder);
+  console.log("Ensuring dependencies are up to date");
 }
