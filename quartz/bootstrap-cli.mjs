@@ -6,6 +6,7 @@ import {
 } from "./cli/handlers.js"
 import { CommonArgv, CreateArgv } from "./cli/args.js";
 import { version } from "./cli/constants.js";
+import process from "node:process";
 
 yargs(hideBin(process.argv))  // hideBin(): slice process.argv from index 2
   .scriptName("quartz")       // scriptName(): set the name of our script $0

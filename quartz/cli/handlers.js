@@ -1,16 +1,19 @@
-/// <reference path="args.js"/>
+/// <reference path="./args.js"/>
 
-import fs, { promises } from "fs";
-import path from "path";
-import { styleText } from "util";
+import fs, { promises } from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { styleText } from "node:util";
 import { intro, outro, select, text } from "@clack/prompts";
 import { CreateArgv } from "./args.js";
 
 import {
+  QUARTZ_SOURCE_BRANCH,
+  UPSTREAM_NAME,
   cwd, version
 } from "./constants.js";
-import { escapePath, exitIfCancel } from "./helpers.js";
-import { execSync } from "child_process";
+import { escapePath, exitIfCancel, gitPull, stashContentFolder } from "./helpers.js";
+import { execSync } from "node:child_process";
 
 /**
  * Resolve content directory path
@@ -223,4 +226,30 @@ See the [documentation](https://quartz.jzhao.xyz) for how to get started.
   • Customizing Quartz a bit more by editing \`quartz.config.ts\`
   • Running \`npx quartz build --serve\` to preview your Quartz locally
   • Hosting you Quartz online (see: https://quartz.jzhao.xyz/hosting)`);
+}
+
+/**
+ * Handles command `npx quartz update`, it updates the project using github repo
+ * @param {import("./args.js").CommonArgvInterface} argv
+ */
+export async function handleUpdate(argv) {
+  const contentFolder = resolveContentPath(argv.directory);
+  console.log(`\n${styleText(["bgGreen", "black"], ` Quartz v${version} `)}\n`);
+  console.log("Backing up your content");
+  execSync(
+    `git remote show upstream || git remote add upstream https://github.com/jackyzha0/quartz.git`, {
+      stdio: "ignore"
+    }
+  );
+  await stashContentFolder(contentFolder);
+  console.log(
+    "Pulling updates... you may need to resolve some `git` conflicts if you've made changes to components or plugins.",
+  );
+
+  try {
+    gitPull(UPSTREAM_NAME, QUARTZ_SOURCE_BRANCH);
+  } catch {
+    console.log(styleText("red", "An error occurred above while pulling updates."));
+    
+  }
 }

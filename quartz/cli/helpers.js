@@ -1,5 +1,8 @@
 import { isCancel, outro } from "@clack/prompts";
-import { styleText } from "util";
+import { styleText } from "node:util";
+import fs from "node:fs";
+import { contentCacheFolder } from "./constants.js";
+import { spawnSync } from "node:child_process";
 
 /**
  * In shell, some directories or files may contain space like 'My Favorite', and
@@ -31,4 +34,48 @@ export function exitIfCancel(val) {
   } else {
     return val;
   }
+}
+
+/**
+ * Stash the content folder to cache folder. It 
+ * 1. remove original cache folder
+ * 2. copy content folder to cache folder
+ * 3. remove content folder
+ * @param {string} contentFolder the content folder of quartz
+ */
+export async function stashContentFolder(contentFolder) {
+  await fs.promises.rm(contentCacheFolder, {
+    force: true,
+    recursive: true,
+  });
+  await fs.promises.cp(contentFolder, contentCacheFolder, {
+    force: true,
+    recursive: true,
+    verbatimSymlinks: true,
+    preserveTimestamps: true,
+  });
+  await fs.promises.rm(contentFolder, {
+    force: true,
+    recursive: true,
+  });
+}
+
+/**
+ * Pull specified branch of given git repository
+ * @param {string} origin remote git repository name
+ * @param {string} branch specified branch name
+ */
+export function gitPull(origin, branch) {
+  const flags = [
+    "--no-rebase",  // [+] using merge instead of rebasing when both behaviors are possible
+    "--autostash",  // [+] automatically saves and restores local uncommitted changes when a command needs a clean working tree
+    "-s",           // [+] selects recursive merge strategy
+    "recursive",
+    "-X",           // [+] keep our version when there is merge conflicts
+    "ours",
+    "--no-edit"
+  ];
+  const out = spawnSync("git", ["pull", ...flags, origin, branch], {
+    stdio: "inherit"
+  });
 }
