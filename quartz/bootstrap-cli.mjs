@@ -2,7 +2,7 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import {
-  handleCreate, handleUpdate
+  handleCreate, handleRestore, handleUpdate
 } from "./cli/handlers.js"
 import { CommonArgv, CreateArgv } from "./cli/args.js";
 import { version } from "./cli/constants.js";
@@ -17,6 +17,9 @@ yargs(hideBin(process.argv))  // hideBin(): slice process.argv from index 2
   })
   .command("update", "Get the latest Quartz updates", CommonArgv, async (argv) => {
     await handleUpdate(argv);
+  })
+  .command("restore", "Try to restore your content folder from the cache", CommonArgv, async (argv) => {
+    await handleRestore(argv);
   })
   .showHelpOnFail(false)      // showHelpOnFail(): the argument `enable` is set to false, so the message won't show up
   .help()                     // help(): show the help message when argument is `--help` or `-h`

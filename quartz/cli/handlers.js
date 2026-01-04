@@ -256,3 +256,12 @@ export async function handleUpdate(argv) {
   await popContentFolder(contentFolder);
   console.log("Ensuring dependencies are up to date");
 }
+
+/**
+ * Handle command `npx quartz restore`, it restores the content folder.
+ * @param {import("./args.js").CommonArgvInterface} argv 
+ */
+export async function handleRestore(argv) {
+  const contentFolder = resolveContentPath(argv.directory);
+  await popContentFolder(contentFolder);
+}
