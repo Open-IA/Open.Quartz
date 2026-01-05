@@ -8,12 +8,13 @@ import { intro, outro, select, text } from "@clack/prompts";
 import { CreateArgv } from "./args.js";
 
 import {
+  ORIGIN_NAME,
   QUARTZ_SOURCE_BRANCH,
   UPSTREAM_NAME,
   cwd, version
 } from "./constants.js";
 import { escapePath, exitIfCancel, gitPull, popContentFolder, stashContentFolder } from "./helpers.js";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 
 /**
  * Resolve content directory path
@@ -251,6 +252,7 @@ export async function handleUpdate(argv) {
   } catch {
     console.log(styleText("red", "An error occurred above while pulling updates."));
     await popContentFolder(contentFolder);
+    process.exit(1);
   }
 
   await popContentFolder(contentFolder);
@@ -264,4 +266,84 @@ export async function handleUpdate(argv) {
 export async function handleRestore(argv) {
   const contentFolder = resolveContentPath(argv.directory);
   await popContentFolder(contentFolder);
+}
+
+/**
+ * Handle command `npx quartz sync`, it syncs with github repo.
+ * @param {import("./args.js").SyncArgvInterface} argv
+ */
+export async function handleSync(argv) {
+  const contentFolder = resolveContentPath(argv.directory);
+  console.log(`\n${styleText(["bgGreen", "black"], ` Quartz v${version} `)}\n`);
+  console.log("Backing up your content");
+
+  if (argv.commit) {
+    const contentStat = await fs.promises.lstat(contentFolder);
+    if (contentStat.isSymbolicLink()) {
+      const linkTarget = await fs.promises.readlink(contentFolder);
+      console.log(styleText("yellow", "Detected symlink, trying to dereference before committing"));
+
+      // Notice git cannot upload target symbolic link content of a directory
+
+      // stash symlink files
+      await stashContentFolder(contentFolder);
+      // follow symlink and copy content
+      await fs.promises.cp(linkTarget, contentFolder, {
+        force: true,
+        recursive: true,
+        preserveTimestamps: true,
+      });
+    }
+
+    const currentTimestamp = new Date().toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    // a timestamp like 'Jan 4, 2026, 10:38 PM'
+    const commitMessage = argv.message ?? ` Quartz sync: ${currentTimestamp} `;
+    spawnSync("git", ["add", "."], { stdio: "inherit" });
+    spawnSync("git", ["commit", "-m", commitMessage], { stdio: "inherit" });
+
+    if (contentStat.isSymbolicLink()) {
+      // put symlink back
+      await popContentFolder(contentFolder);
+    }
+  }
+
+  await stashContentFolder(contentFolder);
+
+  if (argv.pull) {
+    console.log(
+      "Pulling updates from your repository. You may need to resolve some `git` conflicts if you've made changes to components or plugins."
+    );
+    try {
+      gitPull(ORIGIN_NAME, QUARTZ_SOURCE_BRANCH);
+    } catch {
+      console.log(styleText("red", "An error occurred above while pulling updates."));
+      await popContentFolder(contentFolder);
+      process.exit(1);
+    }
+  }
+
+  await popContentFolder(contentFolder);
+  if (argv.push) {
+    console.log("Pushing your changes.");
+    const currentBranch = execSync("git rev-parse --abbrev-ref HEAD").toString().trim();
+    const res = spawnSync("git", ["push", "-uf", ORIGIN_NAME, currentBranch], {
+      stdio: "inherit"
+    });
+    // exec* is suitable for short output and it will return the result (stdout,
+    // stderr) after caching. It provides one-time output after the child process
+    // exit.
+    // spawn* is suitable for streaming output, it returns Buffers. So the type
+    // of `res` is `SpawnSyncReturns<Buffer>`.
+    if (res.status !== 0) {
+      console.log(
+        styleText("red", `An error occurred above while pushing to remote ${ORIGIN_NAME}`),
+      );
+      process.exit(1);
+    }
+  }
+
+  console.log(styleText("green", "Done!"));
 }

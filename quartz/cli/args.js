@@ -54,3 +54,37 @@ export const CreateArgv = {
     describe: "strategy to resolve links",
   }
 };
+
+/**
+ * @typedef {object} SyncArgvInterface
+ * @property {string} directory
+ * @property {boolean} verbose
+ * @property {boolean} commit
+ * @property {string} message
+ * @property {boolean} push
+ * @property {boolean} pull
+ */
+
+export const SyncArgv = {
+  ...CommonArgv,
+  commit: {
+    boolean: true,
+    default: true,
+    describe: "create a git commit for your unsaved changes",
+  },
+  message: {
+    string: true,
+    alias: ["m"],
+    describe: "option to override the default Quartz commit message",
+  },
+  push: {
+    boolean: true,
+    default: true,
+    describe: "push updates to your Quartz fork",
+  },
+  pull: {
+    boolean: true,
+    default: true,
+    describe: "pull updates from your Quartz fork",
+  },
+};
