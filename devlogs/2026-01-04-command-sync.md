@@ -1,5 +1,5 @@
 ---
-title: 2026-01-04-command-update
+title: 2026-01-04-command-sync
 tags:
   - computer-engineering
   - computer-frontend
