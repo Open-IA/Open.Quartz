@@ -6,12 +6,14 @@ import process from "node:process";
 import { styleText } from "node:util";
 import { intro, outro, select, text } from "@clack/prompts";
 import { CreateArgv } from "./args.js";
-
+import esbuild from "esbuild";
+import sassPlugin from "esbuild-sass-plugin";
 import {
   ORIGIN_NAME,
   QUARTZ_SOURCE_BRANCH,
   UPSTREAM_NAME,
-  cwd, version
+  cacheFile,
+  cwd, fp, version
 } from "./constants.js";
 import { escapePath, exitIfCancel, gitPull, popContentFolder, stashContentFolder } from "./helpers.js";
 import { execSync, spawnSync } from "node:child_process";
@@ -346,4 +348,47 @@ export async function handleSync(argv) {
   }
 
   console.log(styleText("green", "Done!"));
+}
+
+/**
+ * Handle `npx quartz build`
+ * @param {import("./args.js").BuildArgvInterface} argv
+ */
+export async function handleBuild(argv) {
+  if (argv.serve) {
+    argv.watch = true;
+  }
+
+  console.log(`\n${styleText(["bgGreen", "black"], ` Quartz v${version} `)} \n`);
+  const ctx = await esbuild.context({
+    // [+] entrypoint bundle script file
+    entryPoints: [fp],
+    outfile: cacheFile,
+    bundle: true,
+    // [+] keep names for debug and function call stack
+    keepNames: true,
+    minifyWhitespace: true,
+    minifySyntax: true,
+    platform: "node",
+    format: "esm",
+    // [+] This transform is introduced in React 17+
+    jsx: "automatic",
+    jsxImportSource: "preact",
+    // [+] This means that all package imports considered external to the bundle
+    //   and the dependencies are not bundled. So the dependencies must still on
+    //   the file system when your bundle is running.
+    packages: "external",
+    // [+] This option tells esbuild to produce some metadata about the build in
+    //   JSON format.
+    metafile: true,
+    // [+] sourcemap can make it easier to debug code.
+    sourcemap: true,
+    sourcesContent: false,
+    plugins: [
+      sassPlugin({
+        type: "css-text",
+        cssImports: true,
+      })
+    ]
+  })
 }
