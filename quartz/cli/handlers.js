@@ -17,6 +17,9 @@ import {
 } from "./constants.js";
 import { escapePath, exitIfCancel, gitPull, popContentFolder, stashContentFolder } from "./helpers.js";
 import { execSync, spawnSync } from "node:child_process";
+import { Mutex } from "async-mutex";
+import prettyBytes from "pretty-bytes";
+import { randomUUID } from "node:crypto";
 
 /**
  * Resolve content directory path
@@ -360,35 +363,172 @@ export async function handleBuild(argv) {
   }
 
   console.log(`\n${styleText(["bgGreen", "black"], ` Quartz v${version} `)} \n`);
+
+  // These config options need understanding of esbuild.
+  // Generally, context is a reusable pipeline with rules for JS/TS, JSX, Sass
+  // and some special inline files. So it can rebuild, watch or dispose later.
+  // Now nothing is built yet, you're just defining how builds should happen.
+  // ctx can later be used with 'ctx.rebuild()' and 'ctx.watch()' etc.
   const ctx = await esbuild.context({
     // [+] entrypoint bundle script file
     entryPoints: [fp],
     outfile: cacheFile,
+    // [+] pulls in all imported files into one bundle (except externals)
     bundle: true,
     // [+] keep names for debug and function call stack
     keepNames: true,
+    // [+] 'minifyWhitespace' and 'minifySyntax' can shrinks code. Smaller output
+    //   but still debuggable.
     minifyWhitespace: true,
     minifySyntax: true,
+    // [+] output is meant to be run in Node.js
     platform: "node",
+    // [+] ES modules (import / export)
     format: "esm",
     // [+] This transform is introduced in React 17+
     jsx: "automatic",
     jsxImportSource: "preact",
     // [+] This means that all package imports considered external to the bundle
     //   and the dependencies are not bundled. So the dependencies must still on
-    //   the file system when your bundle is running.
+    //   the file system when your bundle is running. At runtime, Node still be
+    //   able to resolve them from 'node_modules'
     packages: "external",
     // [+] This option tells esbuild to produce some metadata about the build in
     //   JSON format.
     metafile: true,
     // [+] sourcemap can make it easier to debug code.
     sourcemap: true,
+    // [+] source maps don't embed full source code. For smaller code and source
+    //   files must exist on disk.
     sourcesContent: false,
     plugins: [
+      // [+] .scss is compiled and output is CSS as a string. This is useful for
+      //   injecting styles via JS.
       sassPlugin({
         type: "css-text",
         cssImports: true,
-      })
+      }),
+      // [+] Only applies to '*.inline.scss', output actual CSS. Likely meant to
+      //   be inlined directly into the bundle or DOM.
+      sassPlugin({
+        filter: /\.inline\.scss$/,
+        type: "css",
+        cssImports: true,
+      }),
+      {
+        name: "inline-script-loader",
+        setup(build) {
+          build.onLoad({ filter: /\.inline\.(ts|js)$/ }, async (args) => {
+            let text = await promises.readFile(args.path, "utf8");
+
+            // Remove default exports that we manually inserted
+            // It turns modules into plain scripts. Likely because this code will
+            // be embedded but not imported.
+            text = text.replace("export default", "");
+            text = text.replace("export", "");
+
+            const sourcefile = path.relative(path.resolve("."), args.path);
+            const resolveDir = path.dirname(sourcefile);
+            const transpiled = await esbuild.build({
+              stdin: {
+                contents: text,
+                loader: "ts",
+                resolveDir,
+                sourcefile,
+              },
+              write: false,
+              bundle: true,
+              minify: true,
+              platform: "browser",
+              format: "esm",
+            });
+            const rawMod = transpiled.outputFiles[0].text;
+            return {
+              contents: rawMod,
+              loader: "text",
+            };
+            // The final bundle gets the string contents of the compiled JS.
+            // Not a JS module but just a raw text.
+          })
+        },
+      }
     ]
-  })
+  });
+
+  const buildMutex = new Mutex();
+  let lastBuildMs = 0;
+  let cleanupBuild = null;
+
+  /**
+   * This function is a build pipeline. It will be called when files are changed
+   * and the watch mode is enabled.
+   * @param {() => void} clientRefresh
+   */
+  const build = async (clientRefresh) => {
+    const buildStart = new Date().getTime();
+    lastBuildMs = buildStart;
+    // Their units are both in ms
+
+    const release = await buildMutex.acquire();
+    // 'release' is a object of MutexInterface.Releaser, which is a function
+    // () => void. Calling it will release the mutex.
+
+    if (lastBuildMs > buildStart) {
+      release();
+      return;
+    }
+
+    if (cleanupBuild) {
+      console.log(styleText("yellow", "Detected a source code change, doing a hard rebuild ..."));
+      await cleanupBuild();
+    }
+
+    const result = await ctx.rebuild().catch((err) => {
+      console.error(`${styleText("red", "Couldn't parse Quartz configuration: ")} ${fp}`);
+      console.log(`Reason: ${styleText("grey", err)}`);
+      process.exit(1);
+    });
+    release();
+
+    if (argv.bundleInfo) {
+      const outputFileName = cacheFile;
+      const meta = result.metafile.outputs[outputFileName];
+      console.log(
+        `Successfully transpiled ${Object.keys(meta.inputs).length} files (${prettyBytes(
+          meta.bytes,
+        )})`
+      );
+      console.log(await esbuild.analyzeMetafile(result.metafile, {
+        color: true,
+      }));
+    }
+
+    //! Important issue
+    // 
+    // Following code imports the transpiled build module with a unique query
+    // parameter to bypass Node.js ES module cache, ensuring the latest version
+    // is loaded on each esbuild during watch mode. It's necessary because the
+    // build output changes when source files change, and without cache-busting.
+    // Node would reuse the stale cached module.
+    //
+    // Notice this import is relative, so base 'cacheFile' cannot be used.
+    //
+    // ES module (which is managed by V8 engine) doesn't have a cache invalidate
+    // API so it's hard to implement "hot-reload". When use a random uuid query
+    // parameter, Node.js will treat it as a new module.
+    //
+    // Hot reload is necessary because the build module imports users configuration
+    // at load time, and when configuration changes, the entire module must be
+    // reloaded to pick up new plugin configurations. The cache-busting ensures
+    // the latest build function is always used during watching development.
+    //
+    // 'quartz/.quartz-cache/transpiled-build.mjs' exports { build_default as default }
+    // Following code renames the 'default' to 'buildQuartz'. So this function's
+    // type is same with the default exported function in '../build.ts'
+
+    /** @type {{ default: typeof import("../build.ts").default }} */
+    const { default: buildQuartz } = await import(`../../${cacheFile}?update=${randomUUID()}`);
+
+  }
+
 }
