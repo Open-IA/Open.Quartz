@@ -127,6 +127,63 @@ describe("transforms", () => {
     )
   })
 
+  test("splitAnchor", () => {
+    // Links without anchors
+    assert.deepStrictEqual(path.splitAnchor("index"), ["index", ""])
+    assert.deepStrictEqual(path.splitAnchor("abc/def"), ["abc/def", ""])
+    assert.deepStrictEqual(path.splitAnchor("test.pdf"), ["test.pdf", ""])
+
+    // Links with anchors (slugified for heading links using github-slugger)
+    assert.deepStrictEqual(path.splitAnchor("index#intro"), ["index", "#intro"])
+    assert.deepStrictEqual(path.splitAnchor("abc/def#section-1"), ["abc/def", "#section-1"])
+    assert.deepStrictEqual(path.splitAnchor("abc/def#Hello World"), ["abc/def", "#hello-world"])
+    // github-slugger doesn't replace underscores with hyphens
+    assert.deepStrictEqual(path.splitAnchor("abc/def#test_anchor"), ["abc/def", "#test_anchor"])
+    assert.deepStrictEqual(path.splitAnchor("abc/def#Test123"), ["abc/def", "#test123"])
+
+    // PDF links preserve anchor as-is (for page numbers/named destinations)
+    assert.deepStrictEqual(path.splitAnchor("document.pdf#page=5"), ["document.pdf", "#page=5"])
+    assert.deepStrictEqual(path.splitAnchor("doc.pdf#section.2"), ["doc.pdf", "#section.2"])
+    assert.deepStrictEqual(path.splitAnchor("report.pdf#chapter.1"), ["report.pdf", "#chapter.1"])
+
+    // Multiple # characters - only splits on the first one
+    assert.deepStrictEqual(path.splitAnchor("index#a#b"), ["index", "#a"])
+    assert.deepStrictEqual(path.splitAnchor("test.md#foo#bar#baz"), ["test.md", "#foo"])
+
+    // Edge cases
+    assert.deepStrictEqual(path.splitAnchor("#anchor-only"), ["", "#anchor-only"])
+    assert.deepStrictEqual(path.splitAnchor("file#"), ["file", "#"])
+  })
+
+  test("slugTag", () => {
+    // Simple tags - note: slugify doesn't lowercase, spaces become hyphens
+    assert.strictEqual(path.slugTag("javascript"), "javascript")
+    assert.strictEqual(path.slugTag("Web Development"), "Web-Development")
+    // & is replaced by -and-, but spaces are already replaced, so we get double hyphens
+    assert.strictEqual(path.slugTag("test & more"), "test--and--more")
+    assert.strictEqual(path.slugTag("what about 100%"), "what-about-100-percent")
+
+    // Hierarchical tags (nested with slashes) - each segment slugified independently
+    assert.strictEqual(path.slugTag("programming/languages/javascript/"), "programming/languages/javascript/")
+    assert.strictEqual(path.slugTag("projects/active/website"), "projects/active/website")
+    assert.strictEqual(path.slugTag("Web Dev/Frontend/React"), "Web-Dev/Frontend/React")
+
+    // Tags with special characters - only ?, # get stripped; % becomes -percent
+    // + is NOT handled, dots are preserved
+    assert.strictEqual(path.slugTag("C++"), "C++")  // + is not handled by slugify
+    assert.strictEqual(path.slugTag("C#"), "C")     // # gets stripped
+    assert.strictEqual(path.slugTag("node.js"), "node.js")  // . is preserved
+    assert.strictEqual(path.slugTag("foo?bar#baz"), "foobarbaz")  // ? and # stripped, content preserved
+
+    // Trailing slashes - slugTag does NOT remove them (unlike slugify)
+    assert.strictEqual(path.slugTag("programming/"), "programming/")
+    assert.strictEqual(path.slugTag("programming/web/"), "programming/web/")
+
+    // Mixed hierarchical with special chars
+    assert.strictEqual(path.slugTag("Web Dev/Test & More/"), "Web-Dev/Test--and--More/")
+    assert.strictEqual(path.slugTag("programming/C++/advanced"), "programming/C++/advanced")
+  })
+
   test("transformInternalLink", () => {
     asserts(
       [
