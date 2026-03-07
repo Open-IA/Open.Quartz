@@ -466,10 +466,10 @@ export function splitAnchor(link: string): [string, string] {
  * slugTag("Web Dev/Frontend/React")            // => "Web-Dev/Frontend/React"
  *
  * // Tags with special characters
- * slugTag("C++")                   // => "c"
- * slugTag("C#")                    // => "c"
- * slugTag("node.js")               // => "nodejs"
- * slugTag("foo?bar#baz")           // => "foobar"
+ * slugTag("C++")                   // => "C++"
+ * slugTag("C#")                    // => "C"
+ * slugTag("node.js")               // => "node.js"
+ * slugTag("foo?bar#baz")           // => "foobarbaz"
  *
  * // Trailing slashes will not be removed
  * slugTag("programming/")          // => "programming/"
