@@ -107,7 +107,7 @@ export type FilePath = SlugLike<"filepath">;
 /**
  * Otherwise after casting by this type guard function, normal 'string' type cannot
  * be assigned to 'FilePath' parameter.
- * 
+ *
  * @example
  * ```
  * isFilePath("content/index.md") // => true
@@ -164,7 +164,7 @@ export type SimpleSlug = SlugLike<"simple">;
 /**
  * otherwise after casting by this type guard function, normal 'string' type cannot
  * be assigned to 'simpleslug' parameter.
- * 
+ *
  * @example
  * ```
  * isSimpleSlug("")                     // => true
@@ -256,12 +256,15 @@ export function isAbsoluteURL(s: string): boolean {
  * @example
  * ```ts
  * slugify("note with spaces")       // => "note-with-spaces"
- * slugify("test & more")            // => "test-and-more"
+ * slugify("test & more")            // => "test--and--more"
  * slugify("what about 100%")        // => "what-about-100-percent"
  * slugify("test?query#anchor")      // => "testquery"
  * slugify("abc/def/ghi")            // => "abc/def/ghi"
  * slugify("abc/")                   // => "abc"
  * ```
+ *
+ * @todo
+ * Spaces and character '&' or '%' together may get wrong slugified result.
  */
 function slugify(s: string): string {
   // '&' used in title often means 'and', '%' used in title often means 'percent'
@@ -340,7 +343,7 @@ export function slugifyFilePath(fp: FilePath, excludeExtension?: boolean): FullS
   let extension = getFileExtension(fp);
   const withoutFileExtension = fp.replace(new RegExp(extension + "$"), "");
 
-  if (excludeExtension || [".md", "html", undefined].includes(extension)) {
+  if (excludeExtension || [".md", ".html", undefined].includes(extension)) {
     extension = "";
     // When we need to exclude extensions or the file is HTML file or markdown
     // file, extensions will be excluded as empty.
@@ -397,4 +400,88 @@ export function trimSuffix(s: string, suffix: string): string {
 export function simplifySlug(fp: FullSlug): SimpleSlug {
   const res = stripSlashes(trimSuffix(fp, "index"), true);
   return (res.length === 0 ? "/" : res) as SimpleSlug;
+}
+
+/**
+ * Splits a link into its file path and anchor parts. The anchor is normalized
+ * using GitHub-style slugger for heading links, but preserved as-is for PDF files.
+ *
+ * PDF files are treated specially because their anchors are not slugified - they
+ * represent page numbers or named destinations within the PDF that should be
+ * preserved exactly.
+ *
+ * For non-PDF links, the anchor is slugified to match GitHub's heading link format.
+ * This ensures consistency between generated heading IDs and link references.
+ *
+ * @returns A tuple where the first element is the file path and the second is the
+ * anchor (with `#` prefix, or empty string if no anchor exists)
+ *
+ * @example
+ * ```ts
+ * // Links without anchors
+ * splitAnchor("index")               // => ["index", ""]
+ * splitAnchor("abc/def")             // => ["abc/def", ""]
+ *
+ * // Links with anchors (slugified for heading links)
+ * splitAnchor("index#intro")         // => ["index", "#intro"]
+ * splitAnchor("abc/def#section-1")   // => ["abc/def", "#section-1"]
+ * splitAnchor("abc/def#Hello World") // => ["abc/def", "#hello-world"]
+ *
+ * // PDF links preserve anchor as-is (for page numbers/named destinations)
+ * splitAnchor("document.pdf")        // => ["document.pdf", ""]
+ * splitAnchor("doc.pdf#page=5")      // => ["doc.pdf", "#page=5"]
+ * splitAnchor("doc.pdf#section.2")   // => ["doc.pdf", "#section.2"]
+ *
+ * // Multiple # characters - only splits on the first one
+ * splitAnchor("index#a#b")           // => ["index", "#a"]
+ * ```
+ */
+export function splitAnchor(link: string): [string, string] {
+  let [fp, anchor] = link.split("#", 2);
+  if (fp.endsWith(".pdf")) {
+    return [fp, anchor === undefined ? "" : `#${anchor}`];
+  }
+  anchor = anchor === undefined ? "" : `#${slugAnchor(anchor)}`;
+  return [fp, anchor];
+}
+
+/**
+ * Converts a tag into a URL-friendly slug format. Supports hierarchical tags with
+ * slashes, where each segment is individually slugified.
+ *
+ * This function is useful for normalizing user-defined tags into consistent,
+ * URL-safe identifiers. Hierarchical tags (using `/` as a separator) are
+ * preserved, with each segment independently slugified.
+ *
+ * @example
+ * ```ts
+ * // Simple tags
+ * slugTag("javascript")           // => "javascript"
+ * slugTag("Web Development")      // => "web-development"
+ * slugTag("test & more")          // => "test--and--more"
+ *
+ * // Hierarchical tags (nested with slashes)
+ * slugTag("programming/languages/javascript")  // => "programming/languages/javascript"
+ * slugTag("projects/active/website")           // => "projects/active/website"
+ * slugTag("Web Dev/Frontend/React")            // => "Web-Dev/Frontend/React"
+ *
+ * // Tags with special characters
+ * slugTag("C++")                   // => "c"
+ * slugTag("C#")                    // => "c"
+ * slugTag("node.js")               // => "nodejs"
+ * slugTag("foo?bar#baz")           // => "foobar"
+ *
+ * // Trailing slashes will not be removed
+ * slugTag("programming/")          // => "programming/"
+ * slugTag("programming/web/")      // => "programming/web/"
+ * ```
+ *
+ * @todo
+ * Trailing slashes will not be removed. That may be a bug.
+ */
+export function slugTag(tag: string): string {
+  return tag
+    .split("/")
+    .map((tagSegment) => slugify(tagSegment))
+    .join("/");
 }
