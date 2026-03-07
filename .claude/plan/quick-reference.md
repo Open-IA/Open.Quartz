@@ -22,6 +22,7 @@
 ## What's Missing ❌
 
 ### Critical (P0 - Cannot build without these)
+
 - Build pipeline (4 processors: parse, transform, filter, emit)
 - ContentPage emitter
 - ComponentResources emitter
@@ -32,6 +33,7 @@
 - FrontMatter, OFM, CrawlLinks transformers
 
 ### Important (P1 - Core Quartz features)
+
 - SyntaxHighlighting, Assets, Static emitters
 - FolderPage, TagPage, NotFoundPage emitters
 - Search, Graph, Explorer, TableOfContents components
@@ -39,12 +41,14 @@
 - Footer component
 
 ### Nice to Have (P2 - Polish)
+
 - GFM, Description, Latex transformers
 - RemoveDrafts, ExplicitPublish filters
 - Backlinks, Darkmode, Breadcrumbs components
 - AliasRedirects, CNAME emitters
 
 ### Optional (P3 - Advanced features)
+
 - Citations, OxHugo transformers
 - ReaderMode, Comments components
 - Favicon, CustomOgImages emitters
@@ -52,6 +56,7 @@
 ## Implementation Order
 
 ### Phase 1: Build Pipeline (Week 1)
+
 ```
 quartz/processors/
   ├── parse.ts        ← Read Markdown, create VFiles
@@ -63,6 +68,7 @@ quartz/build.ts       ← Wire it all together
 ```
 
 ### Phase 2: Transformers (Week 2)
+
 ```
 quartz/plugins/transformers/
   ├── frontmatter.ts  ← Parse YAML/TOML
@@ -72,6 +78,7 @@ quartz/plugins/transformers/
 ```
 
 ### Phase 3: Emitters (Week 3)
+
 ```
 quartz/plugins/emitters/
   ├── contentPage.ts       ← Generate HTML pages
@@ -80,6 +87,7 @@ quartz/plugins/emitters/
 ```
 
 ### Phase 4: Components (Week 4)
+
 ```
 quartz/components/
   ├── Head.tsx         ← Page head
@@ -92,21 +100,22 @@ quartz.layout.ts       ← Define layouts
 ```
 
 ### Phase 5: More Features (Week 5+)
+
 - Remaining transformers, emitters, components
 - Styling system
 - Interactive features
 
 ## File Count Summary
 
-| Category | Total | Done | Missing |
-|----------|-------|------|---------|
-| Transformers | 11 | 1 (stub) | 10 |
-| Filters | 2 | 0 | 2 |
-| Emitters | 12 | 0 | 12 |
-| Components | 25 | 1 | 24 |
-| Processors | 4 | 0 | 4 |
-| Styles | 3 | 0 | 3 |
-| **TOTAL** | **57** | **2** | **55** |
+| Category     | Total  | Done     | Missing |
+| ------------ | ------ | -------- | ------- |
+| Transformers | 11     | 1 (stub) | 10      |
+| Filters      | 2      | 0        | 2       |
+| Emitters     | 12     | 0        | 12      |
+| Components   | 25     | 1        | 24      |
+| Processors   | 4      | 0        | 4       |
+| Styles       | 3      | 0        | 3       |
+| **TOTAL**    | **57** | **2**    | **55**  |
 
 ## Key Dependencies
 
@@ -129,6 +138,7 @@ quartz.layout.ts       ← Define layouts
 ## Success Criteria
 
 ✅ When these work, Phase 1-4 is complete:
+
 1. `npm run quartz build` generates HTML files
 2. Markdown content becomes styled HTML pages
 3. Internal links work
@@ -138,6 +148,7 @@ quartz.layout.ts       ← Define layouts
 
 ## Next Action
 
-**Start with Phase 1, Task 1.1:** Create the processors directory and implement the parse processor.
+**Start with Phase 1, Task 1.1:** Create the processors directory and implement
+the parse processor.
 
 See `detailed-task-breakdown.md` for implementation details.
